@@ -53,10 +53,10 @@
 			"revisionTime": "2017-02-28T23:04:16Z"
 		},
 		{
-			"checksumSHA1": "o8h3dA25aCDTog2UJY2PrLYWx3E=",
+			"checksumSHA1": "sjEf6EMTPP4NT3m5a0JJmlbLZ8Y=",
 			"path": "github.com/hashicorp/consul/api",
-			"revision": "28141971f966e99916da2c5e461dd968746491cd",
-			"revisionTime": "2018-06-25T19:45:20Z"
+			"revision": "f8d61976cd14b2cf197a8bb37793040e7ae69e79",
+			"revisionTime": "2018-07-20T20:24:57Z"
 		},
 		{
 			"checksumSHA1": "S3ufu3nrahmecm5mForPAm5fp24=",
@@ -204,6 +204,12 @@
 			"path": "github.com/prometheus/client_golang/prometheus",
 			"revision": "ae77d82d88424108650cfcfc99b9aa3e52a2cd1e",
 			"revisionTime": "2017-02-28T15:13:17Z"
+		},
+		{
+			"checksumSHA1": "d5BiEvD8MrgpWQ6PQJUvawJsMak=",
+			"path": "github.com/prometheus/client_golang/prometheus/promhttp",
+			"revision": "bcbbc08eb2ddff3af83bbf11e7ec13b4fd730b6e",
+			"revisionTime": "2018-07-13T20:10:52Z"
 		},
 		{
 			"checksumSHA1": "DvwvOlPNAgRntBzt3b3OSRMS2N4=",

@@ -9,4 +9,4 @@ WORKDIR /
 COPY --from=builder /go/src/consul-exporter/consul-exporter .
 RUN apk --update --no-cache add ca-certificates
 
-CMD ["/consul-exporter"]
+ENTRYPOINT ["/consul-exporter"]

@@ -18,8 +18,8 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 
 	consul_api "github.com/hashicorp/consul/api"
-	consul "github.com/hashicorp/consul/consul/structs"
-	cleanhttp "github.com/hashicorp/go-cleanhttp"
+
+	"github.com/hashicorp/go-cleanhttp"
 )
 
 const (
@@ -90,12 +90,13 @@ type Exporter struct {
 }
 
 type consulOpts struct {
-	uri        string
-	caFile     string
-	certFile   string
-	keyFile    string
-	serverName string
-	timeout    time.Duration
+	uri                string
+	caFile     		   string
+	certFile   		   string
+	insecureSkipVerify bool
+	keyFile            string
+	serverName         string
+	timeout            time.Duration
 }
 
 // NewExporter returns an initialized Exporter.
@@ -113,21 +114,31 @@ func NewExporter(opts consulOpts, kvPrefix, kvFilter string, healthSummary bool)
 	}
 
 	tlsConfig, err := consul_api.SetupTLSConfig(&consul_api.TLSConfig{
-		Address:  opts.serverName,
-		CAFile:   opts.caFile,
-		CertFile: opts.certFile,
-		KeyFile:  opts.keyFile,
+		Address:  			opts.serverName,
+		CAFile:   			opts.caFile,
+		CertFile: 			opts.certFile,
+		KeyFile:  			opts.keyFile,
+		InsecureSkipVerify: opts.insecureSkipVerify,
+
 	})
 	if err != nil {
 		return nil, err
 	}
 	transport := cleanhttp.DefaultPooledTransport()
 	transport.TLSClientConfig = tlsConfig
-
+	//config := &consul_api.Config{}
 	config := consul_api.DefaultConfig()
+	//fmt.Println(config)
+	config.HttpClient = &http.Client{
+		Timeout: opts.timeout,
+		Transport: transport,
+	}
+	//fmt.Println(config.HttpClient)
+
 	config.Address = u.Host
 	config.Scheme = u.Scheme
-	config.HttpClient.Timeout = opts.timeout
+
+	//config.HttpClient.Timeout = opts.timeout
 	//config.HttpClient.Transport = transport
 
 	client, err := consul_api.NewClient(config)
@@ -228,41 +239,41 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		var passing, warning, critical, maintenance float64
 
 		switch hc.Status {
-		case consul.HealthPassing:
+		case consul_api.HealthPassing:
 			passing = 1
-		case consul.HealthWarning:
+		case consul_api.HealthWarning:
 			warning = 1
-		case consul.HealthCritical:
+		case consul_api.HealthCritical:
 			critical = 1
-		case consul.HealthMaint:
+		case consul_api.HealthMaint:
 			maintenance = 1
 		}
 
 		if hc.ServiceID == "" {
 			ch <- prometheus.MustNewConstMetric(
-				nodeChecks, prometheus.GaugeValue, passing, hc.CheckID, hc.Node, consul.HealthPassing,
+				nodeChecks, prometheus.GaugeValue, passing, hc.CheckID, hc.Node, consul_api.HealthPassing,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				nodeChecks, prometheus.GaugeValue, warning, hc.CheckID, hc.Node, consul.HealthWarning,
+				nodeChecks, prometheus.GaugeValue, warning, hc.CheckID, hc.Node, consul_api.HealthWarning,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				nodeChecks, prometheus.GaugeValue, critical, hc.CheckID, hc.Node, consul.HealthCritical,
+				nodeChecks, prometheus.GaugeValue, critical, hc.CheckID, hc.Node, consul_api.HealthCritical,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				nodeChecks, prometheus.GaugeValue, maintenance, hc.CheckID, hc.Node, consul.HealthMaint,
+				nodeChecks, prometheus.GaugeValue, maintenance, hc.CheckID, hc.Node, consul_api.HealthMaint,
 			)
 		} else {
 			ch <- prometheus.MustNewConstMetric(
-				serviceChecks, prometheus.GaugeValue, passing, hc.CheckID, hc.Node, hc.ServiceID, hc.ServiceName, consul.HealthPassing,
+				serviceChecks, prometheus.GaugeValue, passing, hc.CheckID, hc.Node, hc.ServiceID, hc.ServiceName, consul_api.HealthPassing,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				serviceChecks, prometheus.GaugeValue, warning, hc.CheckID, hc.Node, hc.ServiceID, hc.ServiceName, consul.HealthWarning,
+				serviceChecks, prometheus.GaugeValue, warning, hc.CheckID, hc.Node, hc.ServiceID, hc.ServiceName, consul_api.HealthWarning,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				serviceChecks, prometheus.GaugeValue, critical, hc.CheckID, hc.Node, hc.ServiceID, hc.ServiceName, consul.HealthCritical,
+				serviceChecks, prometheus.GaugeValue, critical, hc.CheckID, hc.Node, hc.ServiceID, hc.ServiceName, consul_api.HealthCritical,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				serviceChecks, prometheus.GaugeValue, maintenance, hc.CheckID, hc.Node, hc.ServiceID, hc.ServiceName, consul.HealthMaint,
+				serviceChecks, prometheus.GaugeValue, maintenance, hc.CheckID, hc.Node, hc.ServiceID, hc.ServiceName, consul_api.HealthMaint,
 			)
 		}
 	}
@@ -301,7 +312,7 @@ func (e *Exporter) collectOneHealthSummary(ch chan<- prometheus.Metric, serviceN
 		// of "passing."
 		passing := 1.
 		for _, hc := range entry.Checks {
-			if hc.Status != consul.HealthPassing {
+			if hc.Status != consul_api.HealthPassing {
 				passing = 0
 				break
 			}
@@ -357,6 +368,7 @@ func main() {
 	kingpin.Flag("consul.server", "HTTP API address of a Consul server or agent. (prefix with https:// to connect over HTTPS)").Default("http://localhost:8500").StringVar(&opts.uri)
 	kingpin.Flag("consul.ca-file", "File path to a PEM-encoded certificate authority used to validate the authenticity of a server certificate.").Default("").StringVar(&opts.caFile)
 	kingpin.Flag("consul.cert-file", "File path to a PEM-encoded certificate used with the private key to verify the exporter's authenticity.").Default("").StringVar(&opts.certFile)
+	kingpin.Flag("consul.insecure-skip-verify", "When set, does not verify TLS host.").BoolVar(&opts.insecureSkipVerify)
 	kingpin.Flag("consul.key-file", "File path to a PEM-encoded private key used with the certificate to verify the exporter's authenticity.").Default("").StringVar(&opts.keyFile)
 	kingpin.Flag("consul.server-name", "When provided, this overrides the hostname for the TLS certificate. It can be used to ensure that the certificate name matches the hostname we declare.").Default("").StringVar(&opts.serverName)
 	kingpin.Flag("consul.timeout", "Timeout on HTTP requests to consul.").Default("200ms").DurationVar(&opts.timeout)
