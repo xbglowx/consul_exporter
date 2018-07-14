@@ -1,7 +1,12 @@
-FROM        quay.io/prometheus/busybox:latest
-MAINTAINER  The Prometheus Authors <prometheus-developers@googlegroups.com>
+FROM golang:alpine as builder
+WORKDIR /go/src/consul-exporter
+COPY . .
+RUN apk --update --no-cache add git && \
+        go build
 
-COPY consul_exporter /bin/consul_exporter
+FROM alpine:latest
+WORKDIR /
+COPY --from=builder /go/src/consul-exporter/consul-exporter .
+RUN apk --update --no-cache add ca-certificates
 
-EXPOSE     9107
-ENTRYPOINT [ "/bin/consul_exporter" ]
+CMD ["/consul-exporter"]
